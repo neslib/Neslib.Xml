@@ -1,0 +1,6 @@
+﻿<sample>
+  <encoding name="utf8 with BOM">世界您好</encoding>
+  <世界>non-Ansi element name</世界>
+  <node 您好="non-Ansi attribute name"/>
+  <界您 世好="世您">界好</界您>
+</sample>  

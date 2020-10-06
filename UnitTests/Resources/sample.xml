@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<root>
+  <!--This is a comment.-->
+  <node1 />
+  <node2></node2>
+  <node3 attr="value" />
+  <node4  attr1 = "value1"   attr2='value2'/>
+  <node5 attr="value">Ampersand: &amp;, LT: &lt;, GT: &gt;, Quotes: &quot; and &apos;, Decimal: &#65;, Hex: &#x42;</node5>
+  <node6>Text with <node6a somens:attr="value">embedded child node</node6a>.</node6>
+  <somens:node7>Text with <![CDATA[embedded "CDATA"]]>.</somens:node7>
+</root>

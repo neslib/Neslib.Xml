@@ -1,0 +1,6 @@
+SAMPLE RCDATA "Resources\\sample.xml"
+SAMPLE_UTF8 RCDATA "Resources\\sample_utf8.xml"
+SAMPLE_UTF16 RCDATA "Resources\\sample_utf16.xml"
+SAMPLE_UTF16_BE RCDATA "Resources\\sample_utf16_be.xml"
+SAMPLE_UTF32 RCDATA "Resources\\sample_utf32.xml"
+SAMPLE_UTF32_BE RCDATA "Resources\\sample_utf32_be.xml"
