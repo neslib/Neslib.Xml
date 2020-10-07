@@ -236,6 +236,8 @@ uses
   {$ENDIF}
   Neslib.Hash;
 
+{$OVERFLOWCHECKS OFF}
+
 const
   EMPTY_HASH = -1;
 
