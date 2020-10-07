@@ -236,7 +236,6 @@ uses
   {$ENDIF}
   Neslib.Hash;
 
-{$OVERFLOWCHECKS OFF}
 
 const
   EMPTY_HASH = -1;
@@ -434,6 +433,11 @@ begin
   end;
 end;
 
+{$IFOPT Q+}
+  {$DEFINE Q_ON}
+  {$OVERFLOWCHECKS OFF}
+{$ENDIF}
+
 class function TXmlPointerMap.Hash(const AKey: UIntPtr): Integer;
 var
   H: UIntPtr;
@@ -453,6 +457,10 @@ begin
   Result := (H xor (H shr 33)) and $7FFFFFFF;
   {$ENDIF}
 end;
+
+{$IFDEF Q_ON}
+  {$OVERFLOWCHECKS ON}
+{$ENDIF}
 
 procedure TXmlPointerMap.Map(const AKey: Pointer; const AID: Integer;
   const AValue: Pointer);
