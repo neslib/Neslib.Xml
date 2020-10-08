@@ -40,67 +40,56 @@ end;
 procedure TPerfTestVerySimpleXml.LoadDocument(const AFilename: String);
 begin
   FDocument := TXmlVerySimple.Create;
-  FDocument.PreserveWhitespace := True;
+  FDocument.Options := FDocument.Options - [doSimplifyTextNodes];  // do not simplify text nodes
   FDocument.LoadFromFile(AFilename);
 end;
 
 function TPerfTestVerySimpleXml.QueryArcsecFields: Integer;
 begin
   Result := 0;
-  var Datasets := FDocument.DocumentElement;
-  for var I := 0 to Datasets.ChildNodes.Count - 1 do
-  begin
-    var Dataset := Datasets.ChildNodes[I];
-    for var J := 0 to Dataset.ChildNodes.Count - 1 do
-    begin
-      var TableHead := Dataset.ChildNodes[J];
-      if (TableHead.NodeName = 'tableHead') then
-      begin
-        for var K := 0 to TableHead.ChildNodes.Count - 1 do
-        begin
-          var Fields := TableHead.ChildNodes[K];
-          if (Fields.NodeName = 'fields') then
-          begin
-            for var L := 0 to Fields.ChildNodes.Count - 1 do
-            begin
-              var Field := Fields.ChildNodes[L];
-              if (Field.NodeName = 'field') then
-              begin
-                for var M := 0 to Field.ChildNodes.Count - 1 do
-                begin
-                  var Units := Field.ChildNodes[M];
-                  if (Units.NodeName = 'units') and (Units.ChildNodes.Count > 0) then
-                  begin
-                    var Text := Units.ChildNodes[0];
-                    if (Text.NodeType = ntText) and (Text.Text = 'arcsec') then
-                      Inc(Result);
+  var Dataset := FDocument.Root.SelectNode('/datasets/dataset');
 
-                    Break;
-                  end;
-                end;
-                Break;
-              end;
-            end;
-            Break;
+  while (Dataset <> nil) do
+  begin
+    var TableHead := Dataset.Find('tableHead');
+    if Assigned(TableHead) then
+    begin
+      var Fields := Tablehead.Find('fields');
+      if Assigned(Fields) then
+      begin
+        var Field := Fields.Find('field');
+        if Assigned(Field) then
+        begin
+          var Units := Field.Find('units');
+          if Assigned(Units) then
+          begin
+            var Text := Units.FirstChild;
+            if (Text.NodeType = TXmlNodeType.ntText) and (Text.Text = 'arcsec') then
+              Inc(Result);
           end;
         end;
-        Break;
       end;
     end;
+
+    // You could use the simple XPath SelectNode function as well (albeit way slower)
+    {var Units := Dataset.SelectNode('tableHead/fields/field/units');
+    if Assigned(Units) then
+    begin
+      var Text := Units.FirstChild;
+      if (Text.NodeType = TXmlNodeType.ntText) and (Text.Text = 'arcsec') then
+        Inc(Result);
+    end;}
+
+    Dataset := Dataset.NextSibling;
   end;
 end;
 
 procedure TPerfTestVerySimpleXml.Traverse(const ANode: TXmlNode);
 begin
-  for var I := 0 to ANode.AttributeList.Count - 1 do
-  begin
-    var Attr := ANode.AttributeList[I];
+  for var Attr in ANode.AttributeList do
     MarkAttribute(Attr.Name, Attr.Value);
-  end;
 
-  for var I := 0 to ANode.ChildNodes.Count - 1 do
-  begin
-    var Child := ANode.ChildNodes[I];
+  for var Child in ANode.ChildNodes do
     case Child.NodeType of
       ntElement:
         begin
@@ -111,13 +100,11 @@ begin
       ntText:
         MarkText(Child.Text);
     end;
-  end;
 end;
 
 procedure TPerfTestVerySimpleXml.TraverseDocument;
 begin
-  MarkElement(''); { VerySimpleXml doesn't expose the root. So mark it manually. }
-  Traverse(FDocument.DocumentElement);
+  Traverse(FDocument.Root);
 end;
 
 end.
