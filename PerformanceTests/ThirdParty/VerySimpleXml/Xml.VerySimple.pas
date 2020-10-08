@@ -1,8 +1,8 @@
-﻿{ VerySimpleXML v2.0.1 - a lightweight, one-unit, cross-platform XML reader/writer
-  for Delphi 2010-XE7 by Dennis Spreen
-  http://blog.spreendigital.de/2014/09/13/verysimplexml-2-0/
+﻿{ VerySimpleXML v3.0.0 - a lightweight, one-unit, cross-platform XML reader/writer
+  for Delphi 10.4+ by Dennis Spreen
+  http://blog.spreendigital.de/2014/09/13/verysimplexml-3-0/
 
-  (c) Copyrights 2011-2014 Dennis D. Spreen <dennis@spreendigital.de>
+  (c) Copyrights 2011-2020 Dennis D. Spreen <dennis@spreendigital.de>
   This unit is free and can be used for any needs. The introduction of
   any changes and the use of those changed library is permitted without
   limitations. Only requirement:
@@ -24,7 +24,7 @@ unit Xml.VerySimple;
 interface
 
 uses
-  Classes, SysUtils, Generics.Defaults, Generics.Collections;
+  System.Classes, System.SysUtils, Generics.Defaults, Generics.Collections, System.Rtti;
 
 const
   TXmlSpaces = #$20 + #$0A + #$0D + #9;
@@ -37,17 +37,38 @@ type
   TXmlNodeList = class;
   TXmlAttributeType = (atValue, atSingle);
   TXmlOptions = set of (doNodeAutoIndent, doCompact, doParseProcessingInstr, doPreserveWhiteSpace, doCaseInsensitive,
-    doWriteBOM);
+    doWriteBOM, doSimplifyTextNodes);
   TExtractTextOptions = set of (etoDeleteStopChar, etoStopString);
 
   {$IFNDEF AUTOREFCOUNT}
   WeakAttribute = class(TCustomAttribute);
   {$ENDIF}
 
+  TStreamReaderFillBuffer = procedure(var Encoding: TEncoding) of object;
+
+  TXmlStreamReader = class(TStreamReader)
+  protected
+    ///	<summary> Call to FillBuffer method of TStreamreader </summary>
+    procedure FillBuffer; overload;
+  public
+    ///	<summary> Assures the read buffer holds at least Value characters </summary>
+    function PrepareBuffer(Value: Integer): Boolean;
+    ///	<summary> Extract text until chars found in StopChars </summary>
+    function ReadText(const StopChars: String; Options: TExtractTextOptions): String; virtual;
+    ///	<summary> Returns fist char but does not removes it from the buffer </summary>
+    function FirstChar: String;
+    ///	<summary> Proceed with the next character(s) (value optional, default 1) </summary>
+    procedure IncCharPos(Value: Integer = 1); virtual;
+    ///	<summary> Returns True if the first uppercased characters at the current position match Value </summary>
+    function IsUppercaseText(const Value: String): Boolean; virtual;
+  end;
+
+
   TXmlAttribute = class(TObject)
   private
     FValue: String;
-    procedure SetValue(const Value: String);
+  protected
+    procedure SetValue(const Value: String); virtual;
   public
     ///	<summary> Attribute name </summary>
     Name: String;
@@ -59,6 +80,8 @@ type
     function AsString: String;
     /// <summary> Escapes XML control characters </summar>
     class function Escape(const Value: String): String; virtual;
+    ///	<summary> Assign attribute values from source attribute </summary>
+    procedure Assign(Source: TXmlAttribute); virtual;
     ///	<summary> Attribute value (always a String) </summary>
     property Value: String read FValue write SetValue;
   end;
@@ -77,10 +100,11 @@ type
     function HasAttribute(const AttrName: String): Boolean; virtual;
     ///	<summary> Returns the attributes in string representation </summary>
     function AsString: String; virtual;
+    ///	<summary> Clears current attributes and assigns all attributes from source attributes </summary>
+    procedure Assign(Source: TXmlAttributeList); virtual;
   end;
 
   TXmlNode = class(TObject)
-  private
   protected
     [Weak] FDocument: TXmlVerySimple;
     procedure SetDocument(Value: TXmlVerySimple);
@@ -113,6 +137,8 @@ type
     function Find(const Name, AttrName, AttrValue: String; NodeTypes: TXmlNodeTypes = [ntElement]): TXmlNode; overload; virtual;
     ///	<summary> Return a list of child nodes with the given name and (optional) node types </summary>
     function FindNodes(const Name: String; NodeTypes: TXmlNodeTypes = [ntElement]): TXmlNodeList; virtual;
+    ///	<summary> Return a child node by NodePath </summary>
+    function SelectNode(const NodePath: String): TXmlNode; overload; virtual;
     ///	<summary> Returns True if the attribute exists </summary>
     function HasAttribute(const AttrName: String): Boolean; virtual;
     ///	<summary> Returns True if a child node with that name exits </summary>
@@ -150,8 +176,8 @@ type
   end;
 
   TXmlNodeList = class(TObjectList<TXmlNode>)
-  private
-    function IsSame(const Value1, Value2: String): Boolean;
+  protected
+    function IsSame(const Value1, Value2: String): Boolean; virtual;
   public
     ///	<summary> The xml document of the node list </summary>
     [Weak] Document: TXmlVerySimple;
@@ -188,19 +214,18 @@ type
   end;
 
   TXmlVerySimple = class(TObject)
-  private
   protected
-    Root: TXmlNode;
+    FRoot: TXmlNode;
     [Weak] FHeader: TXmlNode;
     [Weak] FDocumentElement: TXmlNode;
     SkipIndent: Boolean;
-    procedure Parse(Reader: TStreamReader); virtual;
-    procedure ParseComment(Reader: TStreamReader; var Parent: TXmlNode); virtual;
-    procedure ParseDocType(Reader: TStreamReader; var Parent: TXmlNode); virtual;
-    procedure ParseProcessingInstr(Reader: TStreamReader; var Parent: TXmlNode); virtual;
-    procedure ParseCData(Reader: TStreamReader; var Parent: TXmlNode); virtual;
-    procedure ParseText(const Line: String; Parent: TXmlNode); virtual;
-    function ParseTag(Reader: TStreamReader; ParseText: Boolean; var Parent: TXmlNode): TXmlNode; overload; virtual;
+    procedure Parse(Reader: TXmlStreamReader); virtual;
+    procedure ParseComment(Reader: TXmlStreamReader; var Parent: TXmlNode); virtual;
+    procedure ParseDocType(Reader: TXmlStreamReader; var Parent: TXmlNode); virtual;
+    procedure ParseProcessingInstr(Reader: TXmlStreamReader; var Parent: TXmlNode); virtual;
+    procedure ParseCData(Reader: TXmlStreamReader; var Parent: TXmlNode); virtual;
+    procedure ParseText(const Line: String; Parent: TXmlNode; ReplaceText: Boolean = False); virtual;
+    function ParseTag(Reader: TXmlStreamReader; FindText: Boolean; var Parent: TXmlNode): TXmlNode; overload; virtual;
     function ParseTag(const TagStr: String; var Parent: TXmlNode): TXmlNode; overload; virtual;
     procedure Walk(Writer: TStreamWriter; const PrefixNode: String; Node: TXmlNode); virtual;
     procedure SetText(const Value: String); virtual;
@@ -260,6 +285,8 @@ type
     property Header: TXmlNode read FHeader;
     ///	<summary> Set to True if all spaces and linebreaks should be included as a text node, same as doPreserve option </summary>
     property PreserveWhitespace: Boolean read GetPreserveWhitespace write SetPreserveWhitespace;
+    ///	<summary> The root node of the document</summary>
+    property Root: TXmlNode read FRoot;
     ///	<summary> Defines the xml declaration property "StandAlone", set it to "yes" or "no" </summary>
     property StandAlone: String read GetStandAlone write SetStandAlone;
     ///	<summary> The XML as a string representation </summary>
@@ -273,64 +300,17 @@ type
 implementation
 
 uses
-  StrUtils;
-
-type
-  TStreamReaderHelper = class helper for TStreamReader
-  public
-    ///	<summary> Assures the read buffer holds at least Value characters </summary>
-    function PrepareBuffer(Value: Integer): Boolean;
-    ///	<summary> Extract text until chars found in StopChars </summary>
-    function ReadText(const StopChars: String; Options: TExtractTextOptions): String; virtual;
-    ///	<summary> Returns fist char but does not removes it from the buffer </summary>
-    function FirstChar: String;
-    ///	<summary> Proceed with the next character(s) (value optional, default 1) </summary>
-    procedure IncCharPos(Value: Integer = 1); virtual;
-    ///	<summary> Returns True if the first uppercased characters at the current position match Value </summary>
-    function IsUppercaseText(const Value: String): Boolean; virtual;
-  end;
-
-const
-{$IF CompilerVersion >= 24} // Delphi XE3+ can use Low(), High() and TEncoding.ANSI
-  LowStr = Low(String); // Get string index base, may be 0 (NextGen compiler) or 1 (standard compiler)
-
-{$ELSE} // For any previous Delphi version overwrite High() function and use 1 as string index base
-  LowStr = 1;  // Use 1 as string index base
-
-function High(const Value: String): Integer; inline;
-begin
-  Result := Length(Value);
-end;
-
-//Delphi XE3 added PosEx as an overloaded Pos function, so we need to wrap it in every other Delphi version
-function Pos(const SubStr, S: string; Offset: Integer): Integer; overload; Inline;
-begin
-  Result := PosEx(SubStr, S, Offset);
-end;
-{$IFEND}
-
-{$IF CompilerVersion < 23}  //Delphi XE2 added ANSI as Encoding, in every other Delphi version use TEncoding.Default
-type
-  TEncodingHelper = class helper for TEncoding
-    class function GetANSI: TEncoding; static;
-    class property ANSI: TEncoding read GetANSI;
-  end;
-
-class function TEncodingHelper.GetANSI: TEncoding;
-begin
-  Result := TEncoding.Default;
-end;
-{$IFEND}
+  System.StrUtils;
 
 { TVerySimpleXml }
 
 function TXmlVerySimple.AddChild(const Name: String; NodeType: TXmlNodeType = ntElement): TXmlNode;
 begin
   Result := CreateNode(Name, NodeType);
-  if (NodeType = ntElement) and (not assigned(FDocumentElement)) then
+  if (NodeType = ntElement) and (not Assigned(FDocumentElement)) then
     FDocumentElement := Result;
   try
-    Root.ChildNodes.Add(Result);
+    FRoot.ChildNodes.Add(Result);
   except
     Result.Free;
     raise;
@@ -342,27 +322,27 @@ procedure TXmlVerySimple.Clear;
 begin
   FDocumentElement := NIL;
   FHeader := NIL;
-  Root.Clear;
+  FRoot.Clear;
 end;
 
 constructor TXmlVerySimple.Create;
 begin
   inherited;
-  Root := TXmlNode.Create;
-  Root.NodeType := ntDocument;
-  Root.Parent := Root;
-  Root.Document := Self;
+  FRoot := TXmlNode.Create;
+  FRoot.NodeType := ntDocument;
+  FRoot.Parent := FRoot;
+  FRoot.Document := Self;
   NodeIndentStr := '  ';
-  Options := [doNodeAutoIndent, doWriteBOM];
+  Options := [doNodeAutoIndent, doWriteBOM, doSimplifyTextNodes];
   LineBreak := sLineBreak;
   CreateHeaderNode;
 end;
 
 procedure TXmlVerySimple.CreateHeaderNode;
 begin
-  if assigned(FHeader) then
+  if Assigned(FHeader) then
     Exit;
-  FHeader := Root.ChildNodes.Insert('xml', 0, ntXmlDecl);
+  FHeader := FRoot.ChildNodes.Insert('xml', 0, ntXmlDecl);
   FHeader.Attributes['version'] := '1.0';  // Default XML version
   FHeader.Attributes['encoding'] := 'utf-8';
 end;
@@ -376,20 +356,20 @@ end;
 
 destructor TXmlVerySimple.Destroy;
 begin
-  Root.Parent := NIL;
-  Root.Clear;
-  Root.Free;
+  FRoot.Parent := NIL;
+  FRoot.Clear;
+  FRoot.Free;
   inherited;
 end;
 
 function TXmlVerySimple.GetChildNodes: TXmlNodeList;
 begin
-  Result := Root.ChildNodes;
+  Result := FRoot.ChildNodes;
 end;
 
 function TXmlVerySimple.GetEncoding: String;
 begin
-  if assigned(FHeader) then
+  if Assigned(FHeader) then
     Result := FHeader.Attributes['encoding']
   else
     Result := '';
@@ -402,7 +382,7 @@ end;
 
 function TXmlVerySimple.GetStandAlone: String;
 begin
-  if assigned(FHeader) then
+  if Assigned(FHeader) then
     Result := FHeader.Attributes['standalone']
   else
     Result := '';
@@ -410,7 +390,7 @@ end;
 
 function TXmlVerySimple.GetVersion: String;
 begin
-  if assigned(FHeader) then
+  if Assigned(FHeader) then
     Result := FHeader.Attributes['version']
   else
     Result := '';
@@ -453,7 +433,7 @@ begin
     Writer.NewLine := LineBreak;
 
   SkipIndent := False;
-  for Child in Root.ChildNodes do
+  for Child in FRoot.ChildNodes do
     Walk(Writer, '', Child);
 end;
 
@@ -472,15 +452,15 @@ end;
 
 function TXmlVerySimple.LoadFromStream(const Stream: TStream; BufferSize: Integer = 4096): TXmlVerySimple;
 var
-  Reader: TStreamReader;
+  Reader: TXmlStreamReader;
 begin
-  if Encoding = '' then // none specified then use UTF8 with DetectBom
-    Reader := TStreamReader.Create(Stream, TEncoding.UTF8, True, BufferSize)
+  if Encoding.IsEmpty then // none specified then use UTF8 with DetectBom
+    Reader := TXmlStreamReader.Create(Stream, TEncoding.UTF8, True, BufferSize)
   else
   if AnsiSameText(Encoding, 'utf-8') then
-    Reader := TStreamReader.Create(Stream, TEncoding.UTF8, False, BufferSize)
+    Reader := TXmlStreamReader.Create(Stream, TEncoding.UTF8, False, BufferSize)
   else
-    Reader := TStreamReader.Create(Stream, TEncoding.ANSI, False, BufferSize);
+    Reader := TXmlStreamReader.Create(Stream, TEncoding.ANSI, False, BufferSize);
   try
     Parse(Reader);
   finally
@@ -489,19 +469,19 @@ begin
   Result := Self;
 end;
 
-procedure TXmlVerySimple.Parse(Reader: TStreamReader);
+procedure TXmlVerySimple.Parse(Reader: TXmlStreamReader);
 var
   Parent, Node: TXmlNode;
   FirstChar: String;
   ALine: String;
 begin
   Clear;
-  Parent := Root;
+  Parent := FRoot;
 
   while not Reader.EndOfStream do
   begin
     ALine := Reader.ReadText('<', [etoDeleteStopChar]);
-    if ALine <> '' then  // Check for text nodes
+    if not ALine.IsEmpty then  // Check for text nodes
     begin
       ParseText(Aline, Parent);
       if Reader.EndOfStream then  // if no chars available then exit
@@ -523,10 +503,10 @@ begin
     if FirstChar = '?' then // could be header or processing instruction
       ParseProcessingInstr(Reader, Parent)
     else
-    if FirstChar <> '' then
+    if not FirstChar.IsEmpty then
     begin // Parse a tag, the first tag in a document is the DocumentElement
       Node := ParseTag(Reader, True, Parent);
-      if (not assigned(FDocumentElement)) and (Parent = Root) then
+      if (not Assigned(FDocumentElement)) and (Parent = FRoot) then
         FDocumentElement := Node;
     end;
   end;
@@ -540,22 +520,22 @@ var
   Value: String;
 begin
   Value := TrimLeft(AttribStr);
-  while Value <> '' do
+  while not Value.IsEmpty do
   begin
     AttrName := ExtractText(Value, ' =', []);
     Value := TrimLeft(Value);
 
     Attribute := AttributeList.Add(AttrName);
-    if (Value = '') or (Value[LowStr]<>'=') then
+    if (Value.IsEmpty) or (Value[1] <> '=') then
       Continue;
 
     Delete(Value, 1, 1);
     Attribute.AttributeType := atValue;
     ExtractText(Value, '''' + '"', []);
     Value := TrimLeft(Value);
-    if Value <> '' then
+    if not Value.IsEmpty then
     begin
-      Quote := Value[LowStr];
+      Quote := Value[1];
       Delete(Value, 1, 1);
       AttrText := ExtractText(Value, Quote, [etoDeleteStopChar]); // Get Attribute Value
       Attribute.Value := Unescape(AttrText);
@@ -565,7 +545,7 @@ begin
 end;
 
 
-procedure TXmlVerySimple.ParseText(const Line: String; Parent: TXmlNode);
+procedure TXmlVerySimple.ParseText(const Line: String; Parent: TXmlNode; ReplaceText: Boolean = False);
 var
   SingleChar: Char;
   Node: TXmlNode;
@@ -577,7 +557,7 @@ begin
   begin
     TextNode := False;
     for SingleChar in Line do
-      if AnsiStrScan(TXmlSpaces, SingleChar) = NIL then
+      if not Assigned(AnsiStrScan(TXmlSpaces, SingleChar)) then
       begin
         TextNode := True;
         Break;
@@ -585,13 +565,16 @@ begin
   end;
 
   if TextNode then
-  begin
-    Node := Parent.ChildNodes.Add(ntText);
-    Node.Text := Line;
-  end;
+    if ReplaceText then
+      Parent.Text := Line
+    else
+    begin
+      Node := Parent.ChildNodes.Add(ntText);
+      Node.Text := Line;
+    end;
 end;
 
-procedure TXmlVerySimple.ParseCData(Reader: TStreamReader; var Parent: TXmlNode);
+procedure TXmlVerySimple.ParseCData(Reader: TXmlStreamReader; var Parent: TXmlNode);
 var
   Node: TXmlNode;
 begin
@@ -599,7 +582,7 @@ begin
   Node.Text := Reader.ReadText(']]>', [etoDeleteStopChar, etoStopString]);
 end;
 
-procedure TXmlVerySimple.ParseComment(Reader: TStreamReader; var Parent: TXmlNode);
+procedure TXmlVerySimple.ParseComment(Reader: TXmlStreamReader; var Parent: TXmlNode);
 var
   Node: TXmlNode;
 begin
@@ -607,7 +590,7 @@ begin
   Node.Text := Reader.ReadText('-->', [etoDeleteStopChar, etoStopString]);
 end;
 
-procedure TXmlVerySimple.ParseDocType(Reader: TStreamReader; var Parent: TXmlNode);
+procedure TXmlVerySimple.ParseDocType(Reader: TXmlStreamReader; var Parent: TXmlNode);
 var
   Node: TXmlNode;
   Quote: String;
@@ -624,7 +607,7 @@ begin
   end;
 end;
 
-procedure TXmlVerySimple.ParseProcessingInstr(Reader: TStreamReader; var Parent: TXmlNode);
+procedure TXmlVerySimple.ParseProcessingInstr(Reader: TXmlStreamReader; var Parent: TXmlNode);
 var
   Node: TXmlNode;
   Tag: String;
@@ -649,28 +632,21 @@ begin
   Parent := Node.Parent;
 end;
 
-function TXmlVerySimple.ParseTag(Reader: TStreamReader; ParseText: Boolean; var Parent: TXmlNode): TXmlNode;
+function TXmlVerySimple.ParseTag(Reader: TXmlStreamReader; FindText: Boolean; var Parent: TXmlNode): TXmlNode;
 var
   Tag: String;
   ALine: String;
-  SingleChar: Char;
 begin
   Tag := Reader.ReadText('>', [etoDeleteStopChar]);
   Result := ParseTag(Tag, Parent);
-  if Result = Parent then // only non-self closing nodes may have a text
+  if (Result = Parent) and (FindText) then // only non-self closing nodes may have a text
   begin
     ALine := Reader.ReadText('<', []);
     ALine := Unescape(ALine);
 
-    if PreserveWhiteSpace then
-      Result.Text := ALine
-    else
-      for SingleChar in ALine do
-        if AnsiStrScan(TXmlSpaces, SingleChar) = NIL then
-        begin
-          Result.Text := ALine;
-          Break;
-        end;
+    // if a node consists of text only then replace text, else parse as separate text node
+    if not Aline.IsEmpty then
+      ParseText(ALine, Result, doSimplifyTextNodes in Options);
   end;
 end;
 
@@ -682,7 +658,7 @@ var
   Tag: String;
 begin
   // A closing tag does not have any attributes nor text
-  if (TagStr <> '') and (TagStr[LowStr] = '/') then
+  if (not TagStr.IsEmpty) and (TagStr[1] = '/') then
   begin
     Result := Parent;
     Parent := Parent.Parent;
@@ -695,7 +671,7 @@ begin
   Tag := TagStr;
 
   // Check for a self-closing Tag (does not have any text)
-  if (Tag <> '') and (Tag[High(Tag)] = '/') then
+  if (not Tag.IsEmpty) and (Tag[High(Tag)] = '/') then
     Delete(Tag, Length(Tag), 1)
   else
     Parent := Node;
@@ -706,7 +682,7 @@ begin
     ALine := Tag;
     Delete(Tag, CharPos, Length(Tag));
     Delete(ALine, 1, CharPos);
-    if ALine <> '' then
+    if not ALine.IsEmpty then
       ParseAttributes(ALine, Node.AttributeList);
   end;
 
@@ -731,7 +707,7 @@ function TXmlVerySimple.SaveToStream(const Stream: TStream): TXmlVerySimple;
 var
   Writer: TStreamWriter;
 begin
-  if AnsiSameText(Self.Encoding, 'utf-8') then
+  if AnsiSameText(Encoding, 'utf-8') then
     if doWriteBOM in Options then
       Writer := TStreamWriter.Create(Stream, TEncoding.UTF8)
     else
@@ -749,8 +725,8 @@ end;
 procedure TXmlVerySimple.SetDocumentElement(Value: TXMlNode);
 begin
   FDocumentElement := Value;
-  if Value.Parent = NIL then
-    Root.ChildNodes.Add(Value);
+  if not Assigned(Value.Parent) then
+    FRoot.ChildNodes.Add(Value);
 end;
 
 procedure TXmlVerySimple.SetEncoding(const Value: String);
@@ -809,7 +785,7 @@ var
   Line: String;
   Indent: String;
 begin
-  if (Node = Root.ChildNodes.First) or (SkipIndent) then
+  if (Node = FRoot.ChildNodes.First) or (SkipIndent) then
   begin
     Line := '<';
     SkipIndent := False;
@@ -857,14 +833,14 @@ begin
   Line := Line + Node.Name + Node.AttributeList.AsString;
 
   // Self closing tags
-  if (Node.Text = '') and (not Node.HasChildNodes) then
+  if (Node.Text.IsEmpty) and (not Node.HasChildNodes) then
    begin
     Writer.Write(Line + '/>');
     Exit;
   end;
 
   Line := Line + '>';
-  if Node.Text <> '' then
+  if not Node.Text.IsEmpty then
   begin
     Line := Line + Escape(Node.Text);
     if Node.HasChildNodes then
@@ -1011,14 +987,14 @@ end;
 
 function TXmlNode.InsertChild(const Name: String; Position: Integer; NodeType: TXmlNodeType = ntElement): TXmlNode;
 begin
-  Result := ChildNodes.Insert(Name, Position);
-  if assigned(Result) then
+  Result := ChildNodes.Insert(Name, Position, NodeType);
+  if Assigned(Result) then
     Result.Parent := Self;
 end;
 
 function TXmlNode.IsTextElement: Boolean;
 begin
-  Result := (Text <> '') and (not HasChildNodes);
+  Result := (not Text.IsEmpty) and (not HasChildNodes);
 end;
 
 function TXmlNode.LastChild: TXmlNode;
@@ -1031,7 +1007,7 @@ end;
 
 function TXmlNode.NextSibling: TXmlNode;
 begin
-  if not assigned(Parent) then
+  if not Assigned(Parent) then
     Result := NIL
   else
     Result := Parent.ChildNodes.NextSibling(Self);
@@ -1039,10 +1015,49 @@ end;
 
 function TXmlNode.PreviousSibling: TXmlNode;
 begin
-  if not assigned(Parent) then
+  if not Assigned(Parent) then
     Result := NIL
   else
     Result := Parent.ChildNodes.PreviousSibling(Self);
+end;
+
+function TXmlNode.SelectNode(const NodePath: String): TXmlNode;
+var
+  Elements: TArray<String>;
+  Element: String;
+  SubNode, Node: TXmlNode;
+begin
+  Result := NIL;
+
+  // SplitElements by '/' delimiter
+  Elements := NodePath.Split(['/']);
+  if not Assigned(Elements) then
+    Exit;
+
+  // Start from the root if the path is prefixed with '/'
+  if Elements[0].IsEmpty then
+  begin
+    Node := FDocument.Root;
+    Delete(Elements, 0, 1);
+  end
+  else
+    Node := Self;
+
+  // Traverse all elements
+  SubNode := NIL;
+  for Element in Elements do
+  begin
+    if Element.IsEmpty then
+      Continue;
+
+    SubNode := Node.Find(Element, []);
+    if not Assigned(SubNode) then
+      Break;
+
+    Node := SubNode;
+  end;
+
+  Result := SubNode;
 end;
 
 procedure TXmlNode.SetAttr(const AttrName, AttrValue: String);
@@ -1055,7 +1070,7 @@ var
   Attribute: TXmlAttribute;
 begin
   Attribute := AttributeList.Find(AttrName); // Search for given name
-  if not assigned(Attribute) then // If attribute is not found, create one
+  if not Assigned(Attribute) then // If attribute is not found, create one
     Attribute := AttributeList.Add(AttrName);
   Attribute.AttributeType := atValue;
   Attribute.Name := AttrName; // this allows rewriting of the attribute name (lower/upper case)
@@ -1096,6 +1111,19 @@ begin
   end;
 end;
 
+procedure TXmlAttributeList.Assign(Source: TXmlAttributeList);
+var
+  Attribute: TXmlAttribute;
+  SourceAttribute: TXmlAttribute;
+begin
+  Clear;
+  for SourceAttribute in Source do
+  begin
+    Attribute := Add('');
+    Attribute.Assign(SourceAttribute);
+  end;
+end;
+
 function TXmlAttributeList.AsString: String;
 var
   Attribute: TXmlAttribute;
@@ -1120,8 +1148,8 @@ var
 begin
   Result := NIL;
   for Attribute in Self do
-    if ((assigned(Document) and Document.IsSame(Attribute.Name, Name)) or // use the documents text comparison
-      ((not assigned(Document)) and (Attribute.Name = Name))) then // or if not assigned then compare names case sensitive
+    if ((Assigned(Document) and Document.IsSame(Attribute.Name, Name)) or // use the documents text comparison
+      ((not Assigned(Document)) and (Attribute.Name = Name))) then // or if not assigned then compare names case sensitive
     begin
       Result := Attribute;
       Break;
@@ -1146,6 +1174,7 @@ begin
       Result := Node;
       Break;
     end;
+
 end;
 
 function TXmlNodeList.Add(Value: TXmlNode): Integer;
@@ -1258,19 +1287,19 @@ end;
 
 function TXmlNodeList.IsSame(const Value1, Value2: String): Boolean;
 begin
-  Result := ((assigned(Document) and Document.IsSame(Value1, Value2)) or // use the documents text comparison
-    ((not assigned(Document)) and (Value1 = Value2))); // or if not assigned then compare names case sensitive
+  Result := ((Assigned(Document) and Document.IsSame(Value1, Value2)) or // use the documents text comparison
+    ((not Assigned(Document)) and (Value1 = Value2))); // or if not assigned then compare names case sensitive
 end;
 
 function TXmlNodeList.NextSibling(Node: TXmlNode): TXmlNode;
 var
   Index: Integer;
 begin
-  if (not assigned(Node)) and (Count > 0) then
+  if (not Assigned(Node)) and (Count > 0) then
     Result := First
   else
   begin
-    Index := Self.IndexOf(Node);
+    Index := IndexOf(Node);
     if (Index >= 0) and (Index + 1 < Count) then
       Result := Self[Index + 1]
     else
@@ -1282,7 +1311,7 @@ function TXmlNodeList.PreviousSibling(Node: TXmlNode): TXmlNode;
 var
   Index: Integer;
 begin
-  Index := Self.IndexOf(Node);
+  Index := IndexOf(Node);
   if Index - 1 >= 0 then
     Result := Self[Index - 1]
   else
@@ -1290,6 +1319,13 @@ begin
 end;
 
 { TXmlAttribute }
+
+procedure TXmlAttribute.Assign(Source: TXmlAttribute);
+begin
+  FValue := Source.Value;
+  Name := Source.Name;
+  AttributeType := Source.AttributeType;
+end;
 
 function TXmlAttribute.AsString: String;
 begin
@@ -1318,23 +1354,33 @@ begin
   AttributeType := atValue;
 end;
 
-{ TStreamReaderHelper }
+{ TXmlStreamReader }
 
-function TStreamReaderHelper.FirstChar: String;
+procedure TXmlStreamReader.FillBuffer;
+var
+  TempEncoding: TEncoding;
+begin
+  TempEncoding := CurrentEncoding;
+  FillBuffer(TempEncoding);
+  if TempEncoding <> CurrentEncoding then
+    TRttiContext.Create.GetType(TStreamReader).GetField('FEncoding').SetValue(Self, TempEncoding)
+end;
+
+function TXmlStreamReader.FirstChar: String;
 begin
   if PrepareBuffer(1) then
-    Result := Self.FBufferedData.Chars[0]
+    Result := FBufferedData.Chars[0]
   else
     Result := '';
 end;
 
-procedure TStreamReaderHelper.IncCharPos(Value: Integer);
+procedure TXmlStreamReader.IncCharPos(Value: Integer);
 begin
   if PrepareBuffer(Value) then
-    Self.FBufferedData.Remove(0, Value);
+    FBufferedData.Remove(0, Value);
 end;
 
-function TStreamReaderHelper.IsUppercaseText(const Value: String): Boolean;
+function TXmlStreamReader.IsUppercaseText(const Value: String): Boolean;
 var
   ValueLength: Integer;
   Text: String;
@@ -1344,32 +1390,29 @@ begin
 
   if PrepareBuffer(ValueLength) then
   begin
-    Text := Self.FBufferedData.ToString(0, ValueLength);
+    Text := FBufferedData.ToString(0, ValueLength);
     if Text = Value then
     begin
-      Self.FBufferedData.Remove(0, ValueLength);
+      FBufferedData.Remove(0, ValueLength);
       Result := True;
     end;
   end;
 end;
 
-function TStreamReaderHelper.PrepareBuffer(Value: Integer): Boolean;
+function TXmlStreamReader.PrepareBuffer(Value: Integer): Boolean;
 begin
   Result := False;
 
-  if Self.FBufferedData = NIL then
+  if not Assigned(FBufferedData) then
     Exit;
 
-  if (Self.FBufferedData.Length < Value) and (not Self.FNoDataInStream) then
-  begin
-    var Encoding := Self.CurrentEncoding;
-    Self.FillBuffer(Encoding);
-  end;
+  if (FBufferedData.Length < Value) and (not FNoDataInStream) then
+    FillBuffer;
 
-  Result := (Self.FBufferedData.Length >= Value);
+  Result := (FBufferedData.Length >= Value);
 end;
 
-function TStreamReaderHelper.ReadText(const StopChars: String; Options: TExtractTextOptions): String;
+function TXmlStreamReader.ReadText(const StopChars: String; Options: TExtractTextOptions): String;
 var
   NewLineIndex: Integer;
   PostNewLineIndex: Integer;
@@ -1377,9 +1420,10 @@ var
   Found: Boolean;
   TempIndex: Integer;
   StopCharLength: Integer;
+  PrevLength: Integer;
 begin
   Result := '';
-  if Self.FBufferedData = NIL then
+  if not Assigned(FBufferedData) then
     Exit;
   NewLineIndex := 0;
   PostNewLineIndex := 0;
@@ -1388,37 +1432,35 @@ begin
   while True do
   begin
     // if we're searching for a string then assure the buffer is wide enough
-    if (etoStopString in Options) and (NewLineIndex + StopCharLength > Self.FBufferedData.Length) and
-      (not Self.FNoDataInStream) then
-    begin
-      var Encoding := Self.CurrentEncoding;
-      Self.FillBuffer(Encoding);
-    end;
+    if (etoStopString in Options) and (NewLineIndex + StopCharLength > FBufferedData.Length) and
+      (not FNoDataInStream) then
+      FillBuffer;
 
-    if NewLineIndex >= Self.FBufferedData.Length then
+    if NewLineIndex >= FBufferedData.Length then
     begin
-      if Self.FNoDataInStream then
+      if FNoDataInStream then
       begin
         PostNewLineIndex := NewLineIndex;
         Break;
       end
       else
       begin
-        var Encoding := Self.CurrentEncoding;
-        Self.FillBuffer(Encoding);
-        if Self.FBufferedData.Length = 0 then
+        PrevLength := FBufferedData.Length;
+        FillBuffer;
+        // Break if no more data
+        if (FBufferedData.Length = 0) or (FBufferedData.Length = PrevLength) then
           Break;
       end;
     end;
 
     if etoStopString in Options then
     begin
-      if NewLineIndex + StopCharLength - 1 < Self.FBufferedData.Length then
+      if NewLineIndex + StopCharLength - 1 < FBufferedData.Length then
       begin
         Found := True;
         TempIndex := NewLineIndex;
         for StopChar in StopChars do
-          if Self.FBufferedData[TempIndex] <> StopChar then
+          if FBufferedData[TempIndex] <> StopChar then
           begin
             Found := False;
             Break;
@@ -1440,7 +1482,7 @@ begin
     begin
       Found := False;
       for StopChar in StopChars do
-        if Self.FBufferedData[NewLineIndex] = StopChar then
+        if FBufferedData[NewLineIndex] = StopChar then
         begin
             if etoDeleteStopChar in Options then
               PostNewLineIndex := NewLineIndex + 1
@@ -1457,8 +1499,8 @@ begin
   end;
 
   if NewLineIndex > 0 then
-    Result := Self.FBufferedData.ToString(0, NewLineIndex);
-  Self.FBufferedData.Remove(0, PostNewLineIndex);
+    Result := FBufferedData.ToString(0, NewLineIndex);
+  FBufferedData.Remove(0, PostNewLineIndex);
 end;
 
 end.
