@@ -2191,6 +2191,8 @@ begin
     begin
       if (Result.NodeType = TXmlNodeType.Element) then
         Exit;
+
+      Result := Result.NextSibling;
     end;
   end;
   Result.FNode := nil;
