@@ -496,8 +496,11 @@ var
   Attr: TXmlReaderAttribute;
 begin
   Attr.NameIndex := FInternPool.Get(ANameStart, ANameEnd - ANameStart);
-  SetString(Attr.Value, AValueStart, AValueEnd - AValueStart);
-  FAttributes.Add(Attr);
+  if SetValue(AValueStart, AValueEnd) then begin
+    Attr.Value := FValueString;
+  //  SetString(Attr.Value, AValueStart, AValueEnd - AValueStart);
+    FAttributes.Add(Attr);
+  end;
 end;
 
 constructor TXmlReader.Create(const AXml: XmlString;
