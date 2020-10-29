@@ -2391,7 +2391,6 @@ begin
     Exit;
 
   var Stream := TFileStream.Create(AFilename, fmCreate or fmShareDenyWrite);
-
   try
     Stream.WriteBuffer(Bytes, Length(Bytes));
   finally
