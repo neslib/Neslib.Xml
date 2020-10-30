@@ -275,6 +275,7 @@ type
     procedure SetNextSibling(const AValue: TXmlNode);
     function GetPrevSibling: TXmlNode;
     procedure SetPrevSibling(const AValue: TXmlNode);
+    function GetPrevSiblingEx: TXmlNode;
     function GetDocument: TXmlDocument; inline;
   private
     procedure Free;
@@ -290,7 +291,8 @@ type
     class operator NotEqual(const ALeft: TXmlNode; const ARight: Pointer): Boolean; overload; inline; static;
     class operator NotEqual(const ALeft, ARight: TXmlNode): Boolean; overload; inline; static;
 
-    constructor Create(ANode: PUInt64);
+    { Returns a nil node }
+    class function Create: TXmlNode; inline; static;
 
     { Returns a node enumerator to enable for..in enumeration, as in:
         for var Child in Node do ... }
@@ -556,7 +558,10 @@ type
         Child := Child.NextSibling;
       end; }
     property NextSibling: TXmlNode read GetNextSibling;
-    property PrevSibling: TXmlNode read GetPrevSibling;
+
+    { The previous sibling of this node, or nil in case this is not an Element
+      node, or this node is nil, or this node doesn't have any siblings. }
+    property PrevSibling: TXmlNode read GetPrevSiblingEx;
   end;
 
   { A XML document. This is the entry point of this XML library.
@@ -1235,9 +1240,9 @@ begin
   end;
 end;
 
-constructor TXmlNode.Create(ANode: PUInt64);
+class function TXmlNode.Create: TXmlNode;
 begin
-  FNode := ANode;
+  Result.FNode := nil;
 end;
 
 function TXmlNode.ElementByAttribute(const AAttributeName,
@@ -1542,6 +1547,15 @@ begin
       Result.FNode := Pointer(Block + (Bits shl 3));
     end;
   end;
+end;
+
+function TXmlNode.GetPrevSiblingEx: TXmlNode;
+{ As PrevSibling, but returns nil in case there is no "real" previous sibling
+  (instead of the last child because PrevSibling is circular) }
+begin
+  Result := GetPrevSibling;
+  if (Result.GetNextSibling = nil) then
+    Result.FNode := nil;
 end;
 
 function TXmlNode.GetValue: XmlString;
