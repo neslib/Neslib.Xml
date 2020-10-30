@@ -290,6 +290,8 @@ type
     class operator NotEqual(const ALeft: TXmlNode; const ARight: Pointer): Boolean; overload; inline; static;
     class operator NotEqual(const ALeft, ARight: TXmlNode): Boolean; overload; inline; static;
 
+    constructor Create(ANode: PUInt64);
+
     { Returns a node enumerator to enable for..in enumeration, as in:
         for var Child in Node do ... }
     function GetEnumerator: TEnumerator; inline;
@@ -554,6 +556,7 @@ type
         Child := Child.NextSibling;
       end; }
     property NextSibling: TXmlNode read GetNextSibling;
+    property PrevSibling: TXmlNode read GetPrevSibling;
   end;
 
   { A XML document. This is the entry point of this XML library.
@@ -1230,6 +1233,11 @@ begin
 
     Result := Result.Next;
   end;
+end;
+
+constructor TXmlNode.Create(ANode: PUInt64);
+begin
+  FNode := ANode;
 end;
 
 function TXmlNode.ElementByAttribute(const AAttributeName,
@@ -2382,7 +2390,7 @@ begin
   if (Bytes = nil) then
     Exit;
 
-  var Stream := TFileStream.Create(AFilename, fmCreate);
+  var Stream := TFileStream.Create(AFilename, fmCreate or fmShareDenyWrite);
   try
     Stream.WriteBuffer(Bytes, Length(Bytes));
   finally
