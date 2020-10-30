@@ -262,6 +262,7 @@ type
     function GetNodeType: TXmlNodeType; inline;
     function GetValue: XmlString;
     procedure SetValue(const AValue: XmlString);
+    function GetText: XmlString;
     function GetValueIndex: Integer; inline;
     procedure SetValueIndex(const AValue: Integer); inline;
     function GetParent: TXmlNode;
@@ -511,6 +512,21 @@ type
       * For Comment nodes, this is the comment.
       * For CData nodes, this is the CData. }
     property Value: XmlString read GetValue write SetValue;
+
+    { The text of this node. This differs from the Value property in case this
+      is an Element:
+      * For Element nodes, this is the concatenation of all direct children of
+        this node that are of type Text or CData. A space will be added between
+        concatenated strings if needed.
+      * For Text nodes, this is the text.
+      * For Comment nodes, this is the comment.
+      * For CData nodes, this is the CData.
+
+      For example, given this XML code:
+        <node>foo<child/>bar</node>
+      The the Text property of <node> will return 'foo bar' (with a space
+      between them) }
+    property Text: XmlString read GetText;
 
     { This parent of this node, or nil if this is the root of the document
       (See IXmlDocument.Root) }
@@ -1556,6 +1572,33 @@ begin
   Result := GetPrevSibling;
   if (Result.GetNextSibling = nil) then
     Result.FNode := nil;
+end;
+
+function TXmlNode.GetText: XmlString;
+begin
+  if (FNode = nil) then
+    Result := ''
+  else if (GetNodeType = TXmlNodeType.Element) then
+  begin
+    Result := '';
+    var Child := GetFirstChild;
+    while (Child <> nil) do
+    begin
+      if (Child.NodeType in [TXmlNodeType.Text, TXmlNodeType.CData]) then
+      begin
+        var ChildText := Child.Value;
+        if (ChildText <> '') then
+        begin
+          if (Result <> '') and (not Result.EndsWith(' ')) and (not ChildText.StartsWith(' ')) then
+            Result := Result + ' ';
+          Result := Result + ChildText;
+        end;
+      end;
+      Child := Child.GetNextSibling;
+    end;
+  end
+  else
+    Result := GetValue;
 end;
 
 function TXmlNode.GetValue: XmlString;

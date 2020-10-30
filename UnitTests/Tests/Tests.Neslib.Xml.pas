@@ -35,6 +35,7 @@ type
     [Test] procedure TestRemoveAttribute;
     [Test] procedure TestRemoveAllAttributes;
     [Test] procedure TestAddChild;
+    [Test] procedure TestText;
     [Test] procedure RemoveChildByName;
     [Test] procedure RemoveChild;
     [Test] procedure RemoveAllChildren;
@@ -532,6 +533,37 @@ begin
 
   Doc.DocumentElement.RemoveAttribute('attr3');
   Assert.AreEqual<XmlString>('<root/>', Doc.ToXml([]));
+end;
+
+procedure TTestXmlNode.TestText;
+begin
+  var Doc := TXmlDocument.Create;
+
+  Doc.Parse('<root/>');
+  Assert.AreEqual('', Doc.DocumentElement.Text);
+
+  Doc.Parse('<root>foo</root>');
+  Assert.AreEqual('foo', Doc.DocumentElement.Text);
+  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+
+  Doc.Parse('<root> foo </root>');
+  Assert.AreEqual(' foo ', Doc.DocumentElement.Text);
+
+  Doc.Parse('<root>foo<child/>bar</root>');
+  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+
+  Doc.Parse('<root>foo <child/>bar</root>');
+  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual('foo ', Doc.DocumentElement.FirstChild.Text);
+
+  Doc.Parse('<root>foo<child/> bar</root>');
+  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+
+  Doc.Parse('<root>foo <child/> bar</root>');
+  Assert.AreEqual('foo  bar', Doc.DocumentElement.Text);
+  Assert.AreEqual('foo ', Doc.DocumentElement.FirstChild.Text);
 end;
 
 { TTestXmlDocument }
