@@ -19,6 +19,10 @@ The source files in this library are well documented and should provide enough i
 
 You can also take a look at the unit tests and performance tests, or check [my blog post](https://blog.grijjy.com/2020/10/07/an-xml-dom-with-just-8-bytes-per-node/) for additional information.
 
+## Notable Forks
+
+Frederic Schenckel has a [fork](https://github.com/fschenckel/Neslib.Xml) of this repository that adds an [XMLUtils](https://github.com/fschenckel/Neslib.Xml/tree/main/Helper) unit with several utilities that aid in (de)serializing XML.
+
 ## License
 
 Neslib.Xml is licensed under the Simplified BSD License. 
