@@ -265,10 +265,15 @@ type
 
       Parameters:
         AValue: the string to write.
+        AForAttribute: (optional) flag indicating whether we are encoding an
+          attribute (True) or not (False, default). When True, single quotes (')
+          are not encoded, since the attribute value itself is enclosed in
+          double quotes (").
 
       This method will replace reseverd characters (such as '&' and '<') to
       character entities (eg. '&amp;' and '&lt;'. }
-    procedure WriteEncoded(const AValue: XmlString);
+    procedure WriteEncoded(const AValue: XmlString;
+      const AForAttribute: Boolean = False);
 
     { Writes CData to the output.
 
@@ -1115,7 +1120,8 @@ begin
     Append(AValue[Low(XmlString)], Length(AValue) * SizeOf(XmlChar));
 end;
 
-procedure TXmlWriter.WriteEncoded(const AValue: XmlString);
+procedure TXmlWriter.WriteEncoded(const AValue: XmlString;
+  const AForAttribute: Boolean);
 begin
   for var I := Low(XmlString) to Low(XmlString) + Length(AValue) - 1 do
   begin
@@ -1133,7 +1139,10 @@ begin
         end;
 
       '&' : Write('&amp;');
-      '''': Write('&apos;');
+      '''': if (AForAttribute) then
+              Write(C)
+            else
+              Write('&apos;');
       '"' : Write('&quot;');
       '<' : Write('&lt;');
       '>' : Write('&gt;');

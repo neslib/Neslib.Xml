@@ -2502,7 +2502,7 @@ begin
               AWriter.Write(' ');
               AWriter.Write(Attr.Name);
               AWriter.Write('="');
-              AWriter.WriteEncoded(Attr.Value);
+              AWriter.WriteEncoded(Attr.Value, True);
               AWriter.Write('"');
               Attr := Attr.Next;
             end;

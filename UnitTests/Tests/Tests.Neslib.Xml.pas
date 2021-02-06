@@ -18,6 +18,7 @@ type
     [Test] procedure TestConversion;
     [Test] procedure TestMutate;
     [Test] procedure TestTypes;
+    [Test] procedure TestQuote;
   end;
 
 type
@@ -186,6 +187,18 @@ begin
 
   var Xml := Doc.ToXml([]);
   Assert.AreEqual<XmlString>('<node ns:newattr="bar &amp; baz"/>', Xml);
+end;
+
+procedure TTestXmlAttribute.TestQuote;
+begin
+  var Doc := TXmlDocument.Create('node');
+  var Node := Doc.DocumentElement;
+
+  Node.AddAttribute('attr1', 'value with "double" quotes');
+  Node.AddAttribute('attr2', 'value with ''single'' quotes');
+
+  var Xml := Doc.ToXml([]);
+  Assert.AreEqual<XmlString>('<node attr1="value with &quot;double&quot; quotes" attr2="value with ''single'' quotes"/>', Xml);
 end;
 
 procedure TTestXmlAttribute.TestTypes;
