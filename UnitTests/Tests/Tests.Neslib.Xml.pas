@@ -432,7 +432,7 @@ end;
 procedure TTestXmlNode.TestElementByName;
 begin
   var Doc := TXmlDocument.Create;
-  Doc.Parse('<root><node1><node2><node3></node3></node2></node1></root>');
+  Doc.Parse('<root><node1><node2><!--comment--><node3></node3></node2></node1></root>');
 
   var Node := Doc.Root.ElementByName('root')
                       .ElementByName('node1')
@@ -471,7 +471,7 @@ end;
 procedure TTestXmlNode.TestNextSiblingByName;
 begin
   var Doc := TXmlDocument.Create;
-  Doc.Parse('<root><node1/><node2/><node3/><node4/></root>');
+  Doc.Parse('<root><node1/><node2/><node3/><!--comment--><node4/></root>');
 
   var Node := Doc.DocumentElement.FirstChild;
   Assert.AreEqual<XmlString>('node1', Node.Value);
@@ -486,7 +486,7 @@ end;
 procedure TTestXmlNode.TestPrevSiblingByName;
 begin
   var Doc := TXmlDocument.Create;
-  Doc.Parse('<root><node1/><node2/><node3/><node4/></root>');
+  Doc.Parse('<root><node1/><node2/><node3/><!--comment--><node4/></root>');
 
   var Node := Doc.DocumentElement.ElementByName('node4');
   Assert.AreEqual<XmlString>('node4', Node.Value);
