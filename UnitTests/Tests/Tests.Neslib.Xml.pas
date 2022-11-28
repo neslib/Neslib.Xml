@@ -553,30 +553,30 @@ begin
   var Doc := TXmlDocument.Create;
 
   Doc.Parse('<root/>');
-  Assert.AreEqual('', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('', Doc.DocumentElement.Text);
 
   Doc.Parse('<root>foo</root>');
-  Assert.AreEqual('foo', Doc.DocumentElement.Text);
-  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+  Assert.AreEqual<XmlString>('foo', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('foo', Doc.DocumentElement.FirstChild.Text);
 
   Doc.Parse('<root> foo </root>');
-  Assert.AreEqual(' foo ', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>(' foo ', Doc.DocumentElement.Text);
 
   Doc.Parse('<root>foo<child/>bar</root>');
-  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
-  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+  Assert.AreEqual<XmlString>('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('foo', Doc.DocumentElement.FirstChild.Text);
 
   Doc.Parse('<root>foo <child/>bar</root>');
-  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
-  Assert.AreEqual('foo ', Doc.DocumentElement.FirstChild.Text);
+  Assert.AreEqual<XmlString>('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('foo ', Doc.DocumentElement.FirstChild.Text);
 
   Doc.Parse('<root>foo<child/> bar</root>');
-  Assert.AreEqual('foo bar', Doc.DocumentElement.Text);
-  Assert.AreEqual('foo', Doc.DocumentElement.FirstChild.Text);
+  Assert.AreEqual<XmlString>('foo bar', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('foo', Doc.DocumentElement.FirstChild.Text);
 
   Doc.Parse('<root>foo <child/> bar</root>');
-  Assert.AreEqual('foo  bar', Doc.DocumentElement.Text);
-  Assert.AreEqual('foo ', Doc.DocumentElement.FirstChild.Text);
+  Assert.AreEqual<XmlString>('foo  bar', Doc.DocumentElement.Text);
+  Assert.AreEqual<XmlString>('foo ', Doc.DocumentElement.FirstChild.Text);
 end;
 
 { TTestXmlDocument }

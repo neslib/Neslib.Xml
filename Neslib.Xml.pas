@@ -1706,7 +1706,7 @@ begin
   Result := GetNextSibling;
   while (Result <> nil) do
   begin
-    if (Result.GetValueIndex = Index) then
+    if (Result.NodeType = TXmlNodeType.Element) and (Result.GetValueIndex = Index) then
       Exit;
 
     Result := Result.NextSibling;
@@ -1739,7 +1739,7 @@ begin
   Result := GetPrevSibling;
   while (Result.NextSibling <> nil) do
   begin
-    if (Result.GetValueIndex = Index) then
+    if (Result.NodeType = TXmlNodeType.Element) and (Result.GetValueIndex = Index) then
       Exit;
 
     Result := Result.GetPrevSibling;
