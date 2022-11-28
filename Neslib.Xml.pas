@@ -2469,6 +2469,18 @@ begin
 end;
 
 procedure TXmlDocument.Save(const AWriter: TXmlWriter);
+
+  function WriteComments(const ANode: TXmlNode): TXmlNode;
+  begin
+    Result := ANode;
+    while (Result <> nil) and (Result.NodeType = TXmlNodeType.Comment) do
+    begin
+      AWriter.WriteComment(Result.GetValue);
+      Result := Result.NextSibling;
+      AWriter.NewLine;
+    end;
+  end;
+
 begin
   if (AWriter <> nil) and (FRoot <> nil) then
   begin
@@ -2476,10 +2488,13 @@ begin
     if (Root = nil) then
       Exit;
 
-    var Node := Root;
     var Depth := 0;
     var NewLine := False;
     var Indent := True;
+
+    { Write leading comments }
+    Root := WriteComments(Root);
+    var Node := Root;
 
     repeat
       var Value := Node.GetValue;
@@ -2562,7 +2577,7 @@ begin
         end;
 
         Node := Node.Parent;
-        if (Node.NodeType = TXmlNodeType.Element) then
+        if (Depth > 0) and (Node.NodeType = TXmlNodeType.Element) then
         begin
           Dec(Depth);
 
@@ -2583,6 +2598,8 @@ begin
     until (Node = Root);
     if (NewLine) then
       AWriter.NewLine;
+
+    WriteComments(Node.NextSibling);
   end;
 end;
 

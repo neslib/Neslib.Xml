@@ -242,23 +242,60 @@ begin
 end;
 
 procedure TTestXmlReader.TestIssue9_CommentsAtStart;
+
+  procedure CheckDocument(const ADoc: IXmlDocument);
+  begin
+    var Root := ADoc.Root;
+
+    { <!-- Comment at start of file --> }
+    var Comment := Root.FirstChild;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+    Assert.AreEqual<XmlString>(' Comment at start of file ', Comment.Value);
+
+    { <!-- Second leading comment --> }
+    Comment := Comment.NextSibling;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+    Assert.AreEqual<XmlString>(' Second leading comment ', Comment.Value);
+
+    { <element> }
+    var Element := Comment.NextSibling;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Element, Element.NodeType);
+    Assert.AreEqual<XmlString>('element', Element.Value);
+
+    { <!-- Comment between elements --> }
+    Comment := Element.FirstChild;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+    Assert.AreEqual<XmlString>(' Comment between elements ', Comment.Value);
+
+    { <!-- Comment at end of file --> }
+    Comment := Element.NextSibling;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+    Assert.AreEqual<XmlString>(' Comment at end of file ', Comment.Value);
+
+    { <!-- Second trailing comment --> }
+    Comment := Comment.NextSibling;
+    Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+    Assert.AreEqual<XmlString>(' Second trailing comment ', Comment.Value);
+ end;
+
 begin
   var Doc := TXmlDocument.Create;
   Doc.Parse('<!-- Comment at start of file -->'#10+
+            '<!-- Second leading comment -->'#10+
             '<element>'#10+
-            '</element>');
+            '<!-- Comment between elements -->'#10+
+            '</element>'#10+
+            '<!-- Comment at end of file -->'#10+
+            '<!-- Second trailing comment -->');
 
-  var Root := Doc.Root;
+  CheckDocument(Doc);
 
-  { <!-- Comment at start of file --> }
-  var Comment := Root.FirstChild;
-  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
-  Assert.AreEqual<XmlString>(' Comment at start of file ', Comment.Value);
+  { Check if comments are saved correctly }
+  var Xml := Doc.ToXml([TXmlOutputOption.Indent]);
 
-  { <element> }
-  var Element := Comment.NextSibling;
-  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Element, Element.NodeType);
-  Assert.AreEqual<XmlString>('element', Element.Value);
+  var Reconstructed := TXmlDocument.Create;
+  Reconstructed.Parse(Xml);
+  CheckDocument(Reconstructed);
 end;
 
 procedure TTestXmlReader.TestParseError_ElementNameMismatch;
