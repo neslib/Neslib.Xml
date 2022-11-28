@@ -35,6 +35,7 @@ type
     [Test] procedure TestParseError_MissingEqualInAttribute;
     [Test] procedure TestParseError_InvalidAttributeQuote;
     [Test] procedure TestParseError_ElementNameMismatch;
+    [Test] procedure TestIssue9_CommentsAtStart;
   end;
 
 type
@@ -238,6 +239,26 @@ begin
     else
       Assert.Fail('EXmlParserError expected');
   end;
+end;
+
+procedure TTestXmlReader.TestIssue9_CommentsAtStart;
+begin
+  var Doc := TXmlDocument.Create;
+  Doc.Parse('<!-- Comment at start of file -->'#10+
+            '<element>'#10+
+            '</element>');
+
+  var Root := Doc.Root;
+
+  { <!-- Comment at start of file --> }
+  var Comment := Root.FirstChild;
+  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Comment, Comment.NodeType);
+  Assert.AreEqual<XmlString>(' Comment at start of file ', Comment.Value);
+
+  { <element> }
+  var Element := Comment.NextSibling;
+  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Element, Element.NodeType);
+  Assert.AreEqual<XmlString>('element', Element.Value);
 end;
 
 procedure TTestXmlReader.TestParseError_ElementNameMismatch;

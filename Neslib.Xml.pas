@@ -1589,7 +1589,9 @@ begin
         var ChildText := Child.Value;
         if (ChildText <> '') then
         begin
-          if (Result <> '') and (not Result.EndsWith(' ')) and (not ChildText.StartsWith(' ')) then
+          if (Result <> '') and (Result[Low(XmlString) + Length(Result) - 1] <> ' ') and
+            (ChildText <> '') and (ChildText[Low(XmlString)] <> ' ')
+          then
             Result := Result + ' ';
           Result := Result + ChildText;
         end;
