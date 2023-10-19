@@ -36,6 +36,7 @@ type
     [Test] procedure TestParseError_InvalidAttributeQuote;
     [Test] procedure TestParseError_ElementNameMismatch;
     [Test] procedure TestIssue9_CommentsAtStart;
+    [Test] procedure TestIssue11;
   end;
 
 type
@@ -239,6 +240,16 @@ begin
     else
       Assert.Fail('EXmlParserError expected');
   end;
+end;
+
+procedure TTestXmlReader.TestIssue11;
+begin
+  var Doc := TXmlDocument.Create;
+  Doc.Parse('<foo><!----></foo>');
+  Doc.Parse('<foo><!--bar> </bar--></foo>');
+  Doc.Parse('<foo><!-- >>>This is a comment<<< --></foo>');
+  Doc.Parse('<foo><!-- This is a comment<<< --></foo>');
+  Assert.Pass('Valid comments should pass.');
 end;
 
 procedure TTestXmlReader.TestIssue9_CommentsAtStart;
