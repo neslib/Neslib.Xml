@@ -12,6 +12,16 @@ uses
   Neslib.Xml.Types;
 
 type
+  { Options to customize XML reading }
+  TXmlReaderOption = (
+    { Allow unknown named character references. These are named character
+      references other than the standard &amp; &apos; &lt; &gt; and &quot;
+      ones.
+      If set, unknown character references will be parsed as-is. }
+    AllowUnknownNamedCharacterReferences);
+  TXmlReaderOptions = set of TXmlReaderOption;
+
+type
   { The current state of an IXmlReader. }
   TXmlReaderState = (
     { The end of the XML stream has been reached. }
@@ -88,6 +98,7 @@ type
     FAttributes: TList<TXmlReaderAttribute>;
     FEncoding: TXmlEncoding;
     FInternPool: TXmlStringInternPool;
+    FOptions: TXmlReaderOptions;
     FIsEmptyElement: Boolean;
     function GetAttributeCount: Integer; //inline;
     function GetAttribute(const AIndex: Integer): TXmlReaderAttribute; //inline;
@@ -102,7 +113,8 @@ type
       AValueEnd: PXmlChar);
   protected
     constructor Create(const AXml: XmlString; const AEncoding: TXmlEncoding;
-      const AInternPool: TXmlStringInternPool); overload;
+      const AInternPool: TXmlStringInternPool;
+      const AOptions: TXmlReaderOptions); overload;
   public
     destructor Destroy; override;
   {$ENDREGION 'Internal Declarations'}
@@ -112,9 +124,11 @@ type
       Parameters:
         AXml: the XML string to parse.
         AInternPool: a string intern pool used to store element and attribute
-          names. }
+          names.
+        AOptions: (optional) options to customize the reader }
     constructor Create(const AXml: XmlString;
-      const AInternPool: TXmlStringInternPool); overload;
+      const AInternPool: TXmlStringInternPool;
+      const AOptions: TXmlReaderOptions = []); overload;
 
     { Creates a reader from a file.
 
@@ -122,11 +136,13 @@ type
         AFilename: the name of the file to load.
         AInternPool: a string intern pool used to store element and attribute
           names.
+        AOptions: (optional) options to customize the reader
 
       Returns:
         The reader. }
     class function Load(const AFilename: String;
-      const AInternPool: TXmlStringInternPool): TXmlReader; overload; static;
+      const AInternPool: TXmlStringInternPool;
+      const AOptions: TXmlReaderOptions = []): TXmlReader; overload; static;
 
     { Creates a reader from a stream.
 
@@ -134,11 +150,13 @@ type
         AStream: the stream to load.
         AInternPool: a string intern pool used to store element and attribute
           names.
+        AOptions: (optional) options to customize the reader
 
       Returns:
         The reader. }
     class function Load(const AStream: TStream;
-      const AInternPool: TXmlStringInternPool): TXmlReader; overload; static;
+      const AInternPool: TXmlStringInternPool;
+      const AOptions: TXmlReaderOptions = []): TXmlReader; overload; static;
 
     { Creates a reader from a byte array.
 
@@ -146,11 +164,13 @@ type
         ABytes: the byte array containing the XML data.
         AInternPool: a string intern pool used to store element and attribute
           names.
+        AOptions: (optional) options to customize the reader
 
       Returns:
         The reader. }
     class function Load(const ABytes: TBytes;
-      const AInternPool: TXmlStringInternPool): TXmlReader; overload; static;
+      const AInternPool: TXmlStringInternPool;
+      const AOptions: TXmlReaderOptions = []): TXmlReader; overload; static;
 
     { Encoding of the source file. }
     property Encoding: TXmlEncoding read FEncoding;
@@ -511,19 +531,21 @@ begin
 end;
 
 constructor TXmlReader.Create(const AXml: XmlString;
-  const AInternPool: TXmlStringInternPool);
+  const AInternPool: TXmlStringInternPool; const AOptions: TXmlReaderOptions);
 begin
-  Create(AXml, TXmlEncoding.Utf16, AInternPool);
+  Create(AXml, TXmlEncoding.Utf16, AInternPool, AOptions);
 end;
 
 constructor TXmlReader.Create(const AXml: XmlString;
-  const AEncoding: TXmlEncoding; const AInternPool: TXmlStringInternPool);
+  const AEncoding: TXmlEncoding; const AInternPool: TXmlStringInternPool;
+  const AOptions: TXmlReaderOptions);
 begin
   inherited Create;
   FAttributes := TList<TXmlReaderAttribute>.Create;
   FXml := AXml;
   FEncoding := AEncoding;
   FInternPool := AInternPool;
+  FOptions := AOptions;
   FCurrent := PXmlChar(FXml);
 end;
 
@@ -544,29 +566,32 @@ begin
 end;
 
 class function TXmlReader.Load(const AFilename: String;
-  const AInternPool: TXmlStringInternPool): TXmlReader;
+  const AInternPool: TXmlStringInternPool;
+  const AOptions: TXmlReaderOptions): TXmlReader;
 begin
   var Stream := TFileStream.Create(AFilename, fmOpenRead or fmShareDenyWrite);
   try
-    Result := Load(Stream, AInternPool);
+    Result := Load(Stream, AInternPool, AOptions);
   finally
     Stream.Free;
   end;
 end;
 
 class function TXmlReader.Load(const ABytes: TBytes;
-  const AInternPool: TXmlStringInternPool): TXmlReader;
+  const AInternPool: TXmlStringInternPool;
+  const AOptions: TXmlReaderOptions): TXmlReader;
 begin
   var Stream := TBytesStream.Create(ABytes);
   try
-    Result := Load(Stream, AInternPool);
+    Result := Load(Stream, AInternPool, AOptions);
   finally
     Stream.Free;
   end;
 end;
 
 class function TXmlReader.Load(const AStream: TStream;
-  const AInternPool: TXmlStringInternPool): TXmlReader;
+  const AInternPool: TXmlStringInternPool;
+  const AOptions: TXmlReaderOptions): TXmlReader;
 begin
   if (AStream = nil) then
     Exit(nil);
@@ -684,7 +709,7 @@ begin
     end;
   end;
 
-  Result := TXmlReader.Create(Xml, Encoding, AInternPool);
+  Result := TXmlReader.Create(Xml, Encoding, AInternPool, AOptions);
 end;
 
 function TXmlReader.Next(out AState: TXmlReaderState): Boolean;
@@ -1012,6 +1037,17 @@ begin
            Buf.Append('"');
            Result := True;
           end;
+        end
+        else if (TXmlReaderOption.AllowUnknownNamedCharacterReferences in FOptions) then
+        begin
+          Buf.Append('&');
+          while (Start < P) do
+          begin
+            Buf.Append(Start^);
+            Inc(Start);
+          end;
+          Buf.Append(';');
+          Result := True;
         end
         else
           ParseError(@RS_XML_CHARACTER_REFERENCE);

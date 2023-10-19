@@ -597,32 +597,38 @@ type
 
       Parameters:
         AFilename: the name of the XML file to load.
+        AOptions: (optional) options to customize XML parsing.
 
       Raises:
         EXmlParserError if the XML file is invalid. }
-    procedure Load(const AFilename: String); overload;
+    procedure Load(const AFilename: String;
+      const AOptions: TXmlReaderOptions = []); overload;
 
     { Loads the document from a stream.
 
       Parameters:
         AStream: the XML stream to load.
+        AOptions: (optional) options to customize XML parsing.
 
       Raises:
         EXmlParserError if the XML stream is invalid.
 
       Just clears the document in case AStream is nil. }
-    procedure Load(const AStream: TStream); overload;
+    procedure Load(const AStream: TStream;
+      const AOptions: TXmlReaderOptions = []); overload;
 
     { Loads the document from a UTF-8 encoded byte array.
 
       Parameters:
         ABytes: the byte array with UTF-8 encoding XML data.
+        AOptions: (optional) options to customize XML parsing.
 
       Raises:
         EXmlParserError if the XML data is invalid.
 
       Just clears the document in case ABytes is nil. }
-    procedure Load(const ABytes: TBytes); overload;
+    procedure Load(const ABytes: TBytes;
+      const AOptions: TXmlReaderOptions = []); overload;
 
     { Loads the document using an XML reader.
 
@@ -639,10 +645,12 @@ type
 
       Parameters:
         AXml: the XML data.
+        AOptions: (optional) options to customize XML parsing.
 
       Raises:
         EXmlParserError if the XML data is invalid. }
-    procedure Parse(const AXml: XmlString);
+    procedure Parse(const AXml: XmlString;
+      const AOptions: TXmlReaderOptions = []);
 
     { Saves the XML document to a file.
 
@@ -760,12 +768,16 @@ type
 
     procedure Clear;
 
-    procedure Load(const AFilename: String); overload;
-    procedure Load(const AStream: TStream); overload;
-    procedure Load(const ABytes: TBytes); overload;
+    procedure Load(const AFilename: String;
+      const AOptions: TXmlReaderOptions); overload;
+    procedure Load(const AStream: TStream;
+      const AOptions: TXmlReaderOptions); overload;
+    procedure Load(const ABytes: TBytes;
+      const AOptions: TXmlReaderOptions); overload;
 
     procedure Load(const AReader: TXmlReader); overload;
-    procedure Parse(const AXml: XmlString);
+    procedure Parse(const AXml: XmlString;
+      const AOptions: TXmlReaderOptions);
 
     procedure Save(const AFilename: String;
       const AOptions: TXmlOutputOptions); overload;
@@ -2316,7 +2328,8 @@ begin
   end;
 end;
 
-procedure TXmlDocument.Load(const AStream: TStream);
+procedure TXmlDocument.Load(const AStream: TStream;
+  const AOptions: TXmlReaderOptions);
 begin
   if (AStream = nil) then
   begin
@@ -2324,7 +2337,7 @@ begin
     Exit;
   end;
 
-  var Reader := TXmlReader.Load(AStream, FInternPool);
+  var Reader := TXmlReader.Load(AStream, FInternPool, AOptions);
   try
     Load(Reader);
   finally
@@ -2332,7 +2345,8 @@ begin
   end;
 end;
 
-procedure TXmlDocument.Load(const ABytes: TBytes);
+procedure TXmlDocument.Load(const ABytes: TBytes;
+  const AOptions: TXmlReaderOptions);
 begin
   if (ABytes = nil) then
   begin
@@ -2340,7 +2354,7 @@ begin
     Exit;
   end;
 
-  var Reader := TXmlReader.Load(ABytes, FInternPool);
+  var Reader := TXmlReader.Load(ABytes, FInternPool, AOptions);
   try
     Load(Reader);
   finally
@@ -2348,9 +2362,10 @@ begin
   end;
 end;
 
-procedure TXmlDocument.Load(const AFilename: String);
+procedure TXmlDocument.Load(const AFilename: String;
+  const AOptions: TXmlReaderOptions);
 begin
-  var Reader := TXmlReader.Load(AFilename, FInternPool);
+  var Reader := TXmlReader.Load(AFilename, FInternPool, AOptions);
   try
     Load(Reader);
   finally
@@ -2412,9 +2427,10 @@ begin
   end;
 end;
 
-procedure TXmlDocument.Parse(const AXml: XmlString);
+procedure TXmlDocument.Parse(const AXml: XmlString;
+  const AOptions: TXmlReaderOptions);
 begin
-  var Reader := TXmlReader.Create(AXml, FInternPool);
+  var Reader := TXmlReader.Create(AXml, FInternPool, AOptions);
   try
     Load(Reader);
   finally

@@ -29,6 +29,7 @@ type
     [Test] procedure TestParseError_UnterminatedCharacterReference;
     [Test] procedure TestParseError_InvalidNumericCharacterReference;
     [Test] procedure TestParseError_UnknownCharacterReference;
+    [Test] procedure TestParseError_AllowUnknownCharacterReference;
     [Test] procedure TestParseError_InvalidCommentPrefix;
     [Test] procedure TestParseError_InvalidCommentSuffix;
     [Test] procedure TestParseError_InvalidCData;
@@ -296,6 +297,22 @@ begin
   var Reconstructed := TXmlDocument.Create;
   Reconstructed.Parse(Xml);
   CheckDocument(Reconstructed);
+end;
+
+procedure TTestXmlReader.TestParseError_AllowUnknownCharacterReference;
+begin
+  var Doc := TXmlDocument.Create;
+  Doc.Parse('<foo>A &bar; B</foo>', [TXmlReaderOption.AllowUnknownNamedCharacterReferences]);
+
+  var Root := Doc.Root;
+  var Foo := Root.FirstChild;
+  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Element, Foo.NodeType);
+
+  var Text := Foo.FirstChild;
+  Assert.AreEqual<TXmlNodeType>(TXmlNodeType.Text, Text.NodeType);
+
+  var S := Text.Value;
+  Assert.AreEqual<XmlString>('A &bar; B', S);
 end;
 
 procedure TTestXmlReader.TestParseError_ElementNameMismatch;
