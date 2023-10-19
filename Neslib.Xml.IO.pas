@@ -801,23 +801,17 @@ begin
 
   Inc(P, 3);
   var Start := P;
-  var Level := 1;
+  var Closed := False;
 
-  { Move to end of comment, allowing for nested angled brackets. }
-  while (Level > 0) do
+  { Move to end of comment. }
+  while not Closed do
   begin
-    if (P^ = '<') then
-      Inc(Level)
-    else if (P^ = '>') then
-      Dec(Level)
-    else if (P^ = #0) then
+    if (P^ = #0) then
       ParseError(@RS_XML_UNEXPECTED_EOF);
 
+    Closed := (P >= (Start + 2)) and (P^ = '>') and (P[-1] = '-') and (P[-2] = '-');
     Inc(P);
   end;
-
-  if (P < (Start + 3)) or (P[-2] <> '-') or (P[-3] <> '-') then
-    ParseError(@RS_XML_INVALID_COMMENT);
 
   SetString(FValueString, Start, P - Start - 3);
   FCurrent := P;
