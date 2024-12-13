@@ -49,7 +49,7 @@ type
   EXmlParserError = class(Exception)
   {$REGION 'Internal Declarations'}
   private
-    FXml: PXmlChar;
+    FXml: XmlString;
     FLineNumber: Integer;
     FColumnNumber: Integer;
     FPosition: Integer;
@@ -58,7 +58,7 @@ type
   private
     procedure CalcLineAndColumnNumber;
   public
-    constructor Create(const AMsg: String; const AXml: PXmlChar;
+    constructor Create(const AMsg: String; const AXml: XmlString;
       const APosition: Integer);
   {$ENDREGION 'Internal Declarations'}
   public
@@ -474,7 +474,7 @@ end;
 procedure EXmlParserError.CalcLineAndColumnNumber;
 begin
   var LineNum := 1;
-  var P := FXml;
+  var P := PChar(FXml);
   var LineStart := P;
   for var I := 0 to FPosition - 1 do
   begin
@@ -489,7 +489,7 @@ begin
   FColumnNumber := P - LineStart + 1;
 end;
 
-constructor EXmlParserError.Create(const AMsg: String; const AXml: PXmlChar;
+constructor EXmlParserError.Create(const AMsg: String; const AXml: XmlString;
   const APosition: Integer);
 begin
   inherited Create(AMsg);
