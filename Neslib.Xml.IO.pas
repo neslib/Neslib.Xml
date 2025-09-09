@@ -103,7 +103,8 @@ type
     function GetAttributeCount: Integer; //inline;
     function GetAttribute(const AIndex: Integer): TXmlReaderAttribute; //inline;
   private
-    function SetValue(const AStart, AEnd: PXmlChar): Boolean;
+    function SetValue(const AStart, AEnd: PXmlChar;
+      const APreserveWhitespace: Boolean): Boolean;
     procedure ParseDeclaration;
     procedure ParseStartElement;
     procedure ParseEndElement;
@@ -522,7 +523,7 @@ var
 begin
   Attr.NameIndex := FInternPool.Get(ANameStart, ANameEnd - ANameStart);
 
-  if SetValue(AValueStart, AValueEnd) then
+  if SetValue(AValueStart, AValueEnd, True) then
     Attr.Value := FValueString
   else
     Attr.Value := '';
@@ -732,7 +733,7 @@ begin
 
     if (P <> Start) then
     begin
-      if (SetValue(Start, P)) then
+      if (SetValue(Start, P, False)) then
       begin
         AState := TXmlReaderState.Text;
         FCurrent := P;
@@ -939,7 +940,8 @@ begin
   FCurrent := P + 1;
 end;
 
-function TXmlReader.SetValue(const AStart, AEnd: PXmlChar): Boolean;
+function TXmlReader.SetValue(const AStart, AEnd: PXmlChar;
+  const APreserveWhitespace: Boolean): Boolean;
 var
   Buf: TCharBuffer;
 begin
@@ -1055,8 +1057,11 @@ begin
 
       Inc(P);
     end;
-    if (Result) then
+    if (Result or APreserveWhitespace) then
+    begin
       FValueString := Buf.ToString;
+      Result := True;
+    end;
   finally
     Buf.Release;
   end;
