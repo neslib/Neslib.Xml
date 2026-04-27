@@ -281,6 +281,7 @@ type
   private
     procedure Free;
     procedure InternalAddChild(const AChild: TXmlNode);
+    procedure InternalInsertBefore(const AChild, AReferenceChild: TXmlNode);
     function InternalAddAttribute(const ANameIndex: Integer; const AValue: XmlString): TXmlAttribute;
     function GetBlock: PByte; inline;
   {$ENDREGION 'Internal Declarations'}
@@ -459,6 +460,19 @@ type
 
       This is a shortcut for AddChild(TXmlNodeType.Comment, AComment). }
     function AddComment(const AComment: XmlString): TXmlNode; inline;
+
+    { Inserts a child to this node.
+
+      Parameters:
+        AType: the type of node to add.
+        AValue: the value of the node (depending on AType).
+        AReferenceChild: The node before which new node is inserted.
+        If it is null, the new node is inserted at the end of node's child nodes.
+
+      Returns:
+        The newly inserted child node, or nil in case this node is nil.}
+    function InsertBefore(const AType: TXmlNodeType; const AValue: XmlString;
+      const AReferenceChild: TXmlNode): TXmlNode;
 
     { Removes a child element with a given name.
 
@@ -1226,6 +1240,22 @@ begin
   Result := AddChild(TXmlNodeType.Text, AText);
 end;
 
+function TXmlNode.InsertBefore(const AType: TXmlNodeType;
+  const AValue: XmlString; const AReferenceChild: TXmlNode): TXmlNode;
+begin
+  if (FNode = nil) then
+  begin
+    Result.FNode := nil;
+    Exit;
+  end;
+
+  var Doc := GetDocument;
+  Assert(Doc <> nil);
+  Result := Doc.CreateNode(AType);
+  InternalInsertBefore(Result, AReferenceChild);
+  Result.SetValue(AValue);
+end;
+
 function TXmlNode.AddAttribute(const AName: XmlString;
   const AValue: Single): TXmlAttribute;
 begin
@@ -1700,6 +1730,27 @@ begin
     Tail.SetNextSibling(AChild);
     AChild.SetPrevSibling(Tail);
     Head.SetPrevSibling(AChild);
+  end;
+end;
+
+procedure TXmlNode.InternalInsertBefore(const AChild,
+  AReferenceChild: TXmlNode);
+begin
+  Assert(FNode <> nil);
+  Assert(NodeType = TXmlNodeType.Element);
+  Assert(AChild <> nil);
+
+  AChild.SetParent(Self);
+  if AReferenceChild = nil then
+    InternalAddChild(AChild)
+  else begin
+    var Prev := AReferenceChild.GetPrevSibling;
+    Prev.SetNextSibling(AChild);
+    AChild.SetPrevSibling(Prev);
+    AChild.SetNextSibling(AReferenceChild);
+    AReferenceChild.SetPrevSibling(AChild);
+    if Prev = nil then
+      SetFirstChild(AChild);
   end;
 end;
 
